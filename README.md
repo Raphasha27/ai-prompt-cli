@@ -108,7 +108,22 @@ Add new providers by creating modules in `src/providers/` and registering them i
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
-
 ---
 
-© 2026 **Kirov Dynamics Technology** | Built by **Koketso Raphasha (Raphasha27)**
+## Product Ladder
+
+```
+GitHub (this repo)
+    ↓
+Portfolio → https://raphasha27.github.io/raphasha-dev-portfolio
+    ↓
+Case Study → (coming soon)
+    ↓
+Live Demo → (check the badges above)
+    ↓
+Contact → https://github.com/Raphasha27
+```
+
+Part of the [Kirov Dynamics Technology](https://github.com/Raphasha27) ecosystem.
+
+**Built by Koketso Raphasha — Practical AI for Africa**
