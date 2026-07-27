@@ -1,71 +1,85 @@
 ﻿import argparse
 import json
 import os
-from typing import Optional
+from pathlib import Path
 
+def load_env():
+    env_path = Path(".env")
+    if env_path.exists():
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    os.environ.setdefault(key.strip(), value.strip())
 
-def call_openai(prompt: str, model: str = "gpt-4o-mini") -> Optional[str]:
+def prompt_openai(prompt: str, model: str = "gpt-4o-mini") -> str:
     try:
         from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    except ImportError:
+        return "Error: openai package not installed. Run: pip install openai"
+
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    if not client.api_key:
+        return "Error: OPENAI_API_KEY not set in environment or .env file"
+
+    try:
         response = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.7,
         )
         return response.choices[0].message.content
-    except ImportError:
-        return None
     except Exception as e:
         return f"Error: {e}"
 
-
-def call_anthropic(prompt: str, model: str = "claude-3-haiku-20240307") -> Optional[str]:
+def prompt_anthropic(prompt: str, model: str = "claude-3-haiku-20240307") -> str:
     try:
         from anthropic import Anthropic
-        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    except ImportError:
+        return "Error: anthropic package not installed. Run: pip install anthropic"
+
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    if not client.api_key:
+        return "Error: ANTHROPIC_API_KEY not set in environment or .env file"
+
+    try:
         response = client.messages.create(
             model=model,
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
         return response.content[0].text
-    except ImportError:
-        return None
     except Exception as e:
         return f"Error: {e}"
 
-
 def main():
-    parser = argparse.ArgumentParser(description="AI Prompt CLI — Send prompts to multiple LLM providers")
+    load_env()
+    parser = argparse.ArgumentParser(description="AI Prompt CLI - Send prompts to LLM providers")
     parser.add_argument("--prompt", "-p", required=True, help="The prompt to send")
-    parser.add_argument("--provider", choices=["openai", "anthropic"], default="openai", help="LLM provider")
-    parser.add_argument("--model", default=None, help="Model override (default: provider-specific)")
-    parser.add_argument("--output", "-o", help="Save response to file")
+    parser.add_argument("--provider", "-P", default="openai", choices=["openai", "anthropic"], help="AI provider")
+    parser.add_argument("--model", "-m", help="Model name (defaults to provider default)")
+    parser.add_argument("--output", "-o", help="Output file path (optional)")
     parser.add_argument("--json", action="store_true", help="Output as JSON")
 
     args = parser.parse_args()
-    model = args.model or ("gpt-4o-mini" if args.provider == "openai" else "claude-3-haiku-20240307")
 
     if args.provider == "openai":
-        result = call_openai(args.prompt, model)
-    else:
-        result = call_anthropic(args.prompt, model)
-
-    if result is None:
-        print(f"Provider '{args.provider}' not available. Install required package.")
-        return
+        model = args.model or "gpt-4o-mini"
+        result = prompt_openai(args.prompt, model)
+    elif args.provider == "anthropic":
+        model = args.model or "claude-3-haiku-20240307"
+        result = prompt_anthropic(args.prompt, model)
 
     if args.json:
-        print(json.dumps({"provider": args.provider, "model": model, "response": result}, indent=2))
+        output = json.dumps({"provider": args.provider, "model": model, "response": result}, indent=2)
     else:
-        print(result)
+        output = result
 
     if args.output:
-        with open(args.output, "w") as f:
-            f.write(result)
-        print(f"\nResponse saved to {args.output}")
-
+        Path(args.output).write_text(output)
+        print(f"Output written to {args.output}")
+    else:
+        print(output)
 
 if __name__ == "__main__":
     main()
